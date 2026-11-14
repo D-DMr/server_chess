@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Chess | Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- BIBLIOTECA CHESS.JS PARA VALIDAR AS REGRAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+</head>
+<body>
+
+    <!-- ECRÃ DE MENU INICIAL -->
+    <div id="menu-screen">
+        <h1>Neon Chess</h1>
+        <input type="text" id="player-name" placeholder="O teu nome" value="Jogador">
+        <button onclick="createRoom()">Criar Jogo</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <input type="text" id="join-code" placeholder="Código da Sala">
+            <button onclick="joinRoom()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- ECRÃ DE JOGO -->
+    <div id="game-screen" style="display:none;">
+        <div class="top-bar">
+            <div class="logo">♞ Neon Chess</div>
+            <div id="room-display">Sala: ---</div>
+        </div>
+
+        <div class="game-layout">
+            <!-- Tabuleiro -->
+            <div class="board-column">
+                <div class="player-info top">
+                    <span id="opp-name">Oponente</span>
+                    <div class="clock" id="clock-top">10:00</div>
+                </div>
+                <div id="board"></div>
+                <div class="player-info bottom">
+                    <span id="my-name">Tu</span>
+                    <div class="clock active" id="clock-bottom">10:00</div>
+                </div>
+            </div>
+
+            <!-- Painel Lateral -->
+            <div class="side-panel">
+                <div class="panel-header">Movimentos</div>
+                <ul id="move-history"></ul>
+                <div class="panel-footer">
+                    <button onclick="resign()" class="btn-danger">Desistir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
