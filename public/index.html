@@ -3,56 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Chess | Pro</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- BIBLIOTECA CHESS.JS PARA VALIDAR AS REGRAS -->
+    <title>Neon Chess</title>
+    <!-- A biblioteca chess.js para validar as regras -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <!-- O Socket.io para ligar ao teu servidor no Render -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- ECRÃ DE MENU INICIAL -->
-    <div id="menu-screen">
-        <h1>Neon Chess</h1>
-        <input type="text" id="player-name" placeholder="O teu nome" value="Jogador">
-        <button onclick="createRoom()">Criar Jogo</button>
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <input type="text" id="join-code" placeholder="Código da Sala">
-            <button onclick="joinRoom()">Entrar</button>
-        </div>
-    </div>
+    <!-- MENU LATERAL (Igual ao Chess.com) -->
+    <aside class="sidebar">
+        <div class="logo">♞ Neon Chess</div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active"><span class="icon">♟</span> Jogar</a>
+            <a href="#" class="nav-item"><span class="icon">🧩</span> Quebra-cabeças</a>
+            <a href="#" class="nav-item"><span class="icon">🎓</span> Aprender</a>
+            <a href="#" class="nav-item"><span class="icon">👁</span> Assistir</a>
+        </nav>
+    </aside>
 
-    <!-- ECRÃ DE JOGO -->
-    <div id="game-screen" style="display:none;">
-        <div class="top-bar">
-            <div class="logo">♞ Neon Chess</div>
-            <div id="room-display">Sala: ---</div>
-        </div>
-
-        <div class="game-layout">
-            <!-- Tabuleiro -->
-            <div class="board-column">
-                <div class="player-info top">
-                    <span id="opp-name">Oponente</span>
-                    <div class="clock" id="clock-top">10:00</div>
-                </div>
-                <div id="board"></div>
-                <div class="player-info bottom">
-                    <span id="my-name">Tu</span>
-                    <div class="clock active" id="clock-bottom">10:00</div>
-                </div>
+    <!-- ÁREA PRINCIPAL -->
+    <main class="main-content">
+        
+        <!-- Ecrã Inicial -->
+        <div id="home-screen" class="screen active">
+            <div class="hero">
+                <h1>Jogue xadrez online no site #1!</h1>
+                <p>Junta-te à comunidade e joga contra amigos ou contra a IA.</p>
+                <button class="btn-main" onclick="startAI()">Jogar vs Computador</button>
+                <button class="btn-main secondary" onclick="document.getElementById('online-screen').classList.add('active'); document.getElementById('home-screen').classList.remove('active');">Jogar Online</button>
             </div>
+        </div>
 
-            <!-- Painel Lateral -->
-            <div class="side-panel">
-                <div class="panel-header">Movimentos</div>
-                <ul id="move-history"></ul>
-                <div class="panel-footer">
-                    <button onclick="resign()" class="btn-danger">Desistir</button>
+        <!-- Ecrã Online (Lobby) -->
+        <div id="online-screen" class="screen">
+            <div class="lobby-card">
+                <h2>Jogar Online</h2>
+                <input type="text" id="player-name" placeholder="O teu nome">
+                <button class="btn-main" onclick="createRoom()">Criar Sala</button>
+                <div style="margin-top: 20px;">
+                    <input type="text" id="join-code" placeholder="Código da sala">
+                    <button class="btn-main secondary" onclick="joinRoom()">Entrar na Sala</button>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Ecrã do Tabuleiro -->
+        <div id="game-screen" class="screen">
+            <div class="game-layout">
+                <!-- Tabuleiro -->
+                <div class="board-area">
+                    <div class="player-bar">
+                        <span id="opp-name">Oponente</span>
+                        <div class="clock">10:00</div>
+                    </div>
+                    <div id="board"></div>
+                    <div class="player-bar">
+                        <span id="my-name">Tu</span>
+                        <div class="clock active">10:00</div>
+                    </div>
+                </div>
+                
+                <!-- Painel de Movimentos -->
+                <div class="history-panel">
+                    <h3>Movimentos</h3>
+                    <ul id="move-history"></ul>
+                    <button class="btn-danger" onclick="location.reload()">Desistir</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
 
     <script src="script.js"></script>
 </body>
