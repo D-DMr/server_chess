@@ -1,60 +1,69 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Rota básica para verificar se está vivo
-app.get('/', (req, res) => {
-    res.send('Servidor de Xadrez Online a funcionar!');
-});
+// Servir os ficheiros estáticos da pasta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
-let waitingPlayer = null;
+// Lógica de Salas
+const rooms = {};
 
 io.on('connection', (socket) => {
-    console.log('Novo jogador ligado:', socket.id);
+    console.log('Jogador conectado:', socket.id);
 
-    socket.on('join_game', () => {
-        if (waitingPlayer) {
-            const room = waitingPlayer.id + '_' + socket.id;
-            socket.join(room);
-            waitingPlayer.join(room);
+    socket.on('create_room', (data) => {
+        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        rooms[roomId] = {
+            players: [{ id: socket.id, color: 'w', name: data.name }],
+            fen: 'start'
+        };
+        socket.join(roomId);
+        socket.emit('room_created', { roomId, color: 'w' });
+    });
 
-            waitingPlayer.emit('game_start', { room: room, color: 'white' });
-            socket.emit('game_start', { room: room, color: 'black' });
-
-            console.log('Jogo começou na sala:', room);
-            waitingPlayer = null;
+    socket.on('join_room', (data) => {
+        const room = rooms[data.roomId];
+        if (room && room.players.length === 1) {
+            room.players.push({ id: socket.id, color: 'b', name: data.name });
+            socket.join(data.roomId);
+            
+            // Avisa ambos que o jogo começou
+            io.to(data.roomId).emit('game_start', {
+                fen: room.fen,
+                players: room.players
+            });
         } else {
-            waitingPlayer = socket;
-            socket.emit('waiting', "À espera de oponente...");
+            socket.emit('error_msg', 'Sala cheia ou não existe.');
         }
     });
 
     socket.on('move', (data) => {
-        socket.to(data.room).emit('move', data.move);
-    });
-    
-    socket.on('resign', (data) => {
-        socket.to(data.room).emit('resign');
+        const room = rooms[data.roomId];
+        if (room) {
+            room.fen = data.fen; // Atualiza o estado do jogo
+            socket.to(data.roomId).emit('move', data.move);
+        }
     });
 
     socket.on('disconnect', () => {
-        if (waitingPlayer && waitingPlayer.id === socket.id) {
-            waitingPlayer = null;
+        console.log('Jogador desligado:', socket.id);
+        // Limpar salas vazias
+        for (const roomId in rooms) {
+            rooms[roomId].players = rooms[roomId].players.filter(p => p.id !== socket.id);
+            if (rooms[roomId].players.length === 0) {
+                delete rooms[roomId];
+            }
         }
-        console.log('Jogador desligou:', socket.id);
     });
 });
 
-// Render usa a porta definida na variável PORT, ou a 10000 por defeito
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
     console.log(`Servidor a correr na porta ${PORT}`);
