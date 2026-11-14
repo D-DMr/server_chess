@@ -4,52 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Chess</title>
-    <!-- A biblioteca chess.js para validar as regras -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <!-- O Socket.io para ligar ao teu servidor no Render -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- MENU LATERAL (Igual ao Chess.com) -->
+    <!-- MENU LATERAL (Fica sempre visível à esquerda) -->
     <aside class="sidebar">
-        <div class="logo">♞ Neon Chess</div>
+        <div class="logo">♞ <span>Neon Chess</span></div>
         <nav class="nav-menu">
-            <a href="#" class="nav-item active"><span class="icon">♟</span> Jogar</a>
+            <a href="#" class="nav-item active" onclick="showScreen('home-screen')"><span class="icon">♟</span> Jogar</a>
             <a href="#" class="nav-item"><span class="icon">🧩</span> Quebra-cabeças</a>
             <a href="#" class="nav-item"><span class="icon">🎓</span> Aprender</a>
             <a href="#" class="nav-item"><span class="icon">👁</span> Assistir</a>
         </nav>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
+    <!-- ÁREA PRINCIPAL (Muda consoante o ecrã) -->
     <main class="main-content">
         
-        <!-- Ecrã Inicial -->
+        <!-- 1. Ecrã Inicial -->
         <div id="home-screen" class="screen active">
             <div class="hero">
                 <h1>Jogue xadrez online no site #1!</h1>
                 <p>Junta-te à comunidade e joga contra amigos ou contra a IA.</p>
-                <button class="btn-main" onclick="startAI()">Jogar vs Computador</button>
-                <button class="btn-main secondary" onclick="document.getElementById('online-screen').classList.add('active'); document.getElementById('home-screen').classList.remove('active');">Jogar Online</button>
-            </div>
-        </div>
-
-        <!-- Ecrã Online (Lobby) -->
-        <div id="online-screen" class="screen">
-            <div class="lobby-card">
-                <h2>Jogar Online</h2>
-                <input type="text" id="player-name" placeholder="O teu nome">
-                <button class="btn-main" onclick="createRoom()">Criar Sala</button>
-                <div style="margin-top: 20px;">
-                    <input type="text" id="join-code" placeholder="Código da sala">
-                    <button class="btn-main secondary" onclick="joinRoom()">Entrar na Sala</button>
+                <div class="hero-buttons">
+                    <button class="btn-main" onclick="startAI()">Jogar vs Computador</button>
+                    <button class="btn-main secondary" onclick="showScreen('online-screen')">Jogar Online</button>
                 </div>
             </div>
         </div>
 
-        <!-- Ecrã do Tabuleiro -->
+        <!-- 2. Ecrã Online (Lobby) -->
+        <div id="online-screen" class="screen">
+            <div class="lobby-card">
+                <h2>Jogar Online</h2>
+                <div class="input-group">
+                    <input type="text" id="player-name" placeholder="O teu nome">
+                    <button class="btn-main" onclick="createRoom()">Criar Sala</button>
+                </div>
+                <div class="input-group" style="margin-top: 15px;">
+                    <input type="text" id="join-code" placeholder="Código da sala">
+                    <button class="btn-main secondary" onclick="joinRoom()">Entrar na Sala</button>
+                </div>
+                <button class="btn-text" onclick="showScreen('home-screen')">Voltar atrás</button>
+            </div>
+        </div>
+
+        <!-- 3. Ecrã do Tabuleiro -->
         <div id="game-screen" class="screen">
             <div class="game-layout">
                 <!-- Tabuleiro -->
