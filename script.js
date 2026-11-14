@@ -2,7 +2,7 @@
 // LIGAÇÃO AO SERVIDOR RENDER (WEBSOCKET)
 // ==========================================
 // COLA O TEU LINK DO RENDER AQUI (ex: https://neon-chess.onrender.com)
-const socket = io('COLA_O_TEU_LINK_DO_RENDER_AQUI'); 
+const socket = io('https://server-chess-zazq.onrender.com'); 
 let roomId = null;
 
 // --- BASE DE DADOS LOCAL ---
