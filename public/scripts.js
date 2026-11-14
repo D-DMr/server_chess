@@ -1,20 +1,60 @@
-// LIGAÇÃO AO SERVIDOR (No Render ele liga automaticamente ao host atual)
-const socket = io(); 
+// COLA O TEU LINK DO RENDER AQUI
+const socket = io('COLA_O_TEU_LINK_DO_RENDER_AQUI'); 
+
 const game = new Chess();
-let myColor = null;
+let myColor = 'w';
 let roomId = null;
 let selectedSquare = null;
+let isOnline = false;
+
+// ==========================================
+// NAVEGAÇÃO
+// ==========================================
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+}
+
+function startAI() {
+    isOnline = false;
+    myColor = 'w';
+    document.getElementById('opp-name').innerText = "Computador";
+    showScreen('game-screen');
+    game.reset();
+    drawBoard();
+}
+
+// ==========================================
+// ONLINE (SOCKET.IO)
+// ==========================================
+function createRoom() {
+    const name = document.getElementById('player-name').value || "Jogador";
+    socket.emit('create_room', { name });
+}
+
+function joinRoom() {
+    const name = document.getElementById('player-name').value || "Jogador";
+    const code = document.getElementById('join-code').value.toUpperCase();
+    if(!code) return alert("Insere o código da sala!");
+    socket.emit('join_room', { name, roomId: code });
+}
 
 socket.on('room_created', (data) => {
+    isOnline = true;
     roomId = data.roomId;
-    myColor = data.color;
-    initGameUI(`Sala: ${roomId}`);
+    myColor = 'w'; 
+    document.getElementById('my-name').innerText = document.getElementById('player-name').value || "Tu";
+    document.getElementById('opp-name').innerText = "À espera...";
+    showScreen('game-screen');
+    game.reset();
+    drawBoard();
 });
 
 socket.on('game_start', (data) => {
-    myColor = data.players.find(p => p.id === socket.id).color;
-    document.getElementById('opp-name').innerText = data.players.find(p => p.id !== socket.id).name;
-    initGameUI(`Sala: ${roomId}`);
+    isOnline = true;
+    myColor = 'b'; 
+    document.getElementById('opp-name').innerText = data.players.find(p => p.id !== socket.id)?.name || "Oponente";
+    showScreen('game-screen');
     game.load(data.fen);
     drawBoard();
 });
@@ -27,32 +67,13 @@ socket.on('move', (move) => {
 
 socket.on('error_msg', (msg) => alert(msg));
 
-// --- AÇÕES DO MENU ---
-function createRoom() {
-    const name = document.getElementById('player-name').value || "Jogador";
-    socket.emit('create_room', { name });
-}
-
-function joinRoom() {
-    const name = document.getElementById('player-name').value || "Jogador";
-    const roomId = document.getElementById('join-code').value.toUpperCase();
-    if(!roomId) return alert("Insere o código!");
-    socket.emit('join_room', { name, roomId });
-}
-
-function initGameUI(roomText) {
-    document.getElementById('menu-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'flex';
-    document.getElementById('room-display').innerText = roomText;
-    document.getElementById('my-name').innerText = document.getElementById('player-name').value || "Tu";
-    drawBoard();
-}
-
-// --- RENDERIZAÇÃO DO TABULEIRO ---
+// ==========================================
+// LÓGICA DO TABULEIRO E RENDERIZAÇÃO
+// ==========================================
 function drawBoard() {
     const boardEl = document.getElementById('board');
     boardEl.innerHTML = '';
-    const boardState = game.board(); // Matriz 8x8 da biblioteca chess.js
+    const boardState = game.board(); 
 
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
@@ -60,22 +81,17 @@ function drawBoard() {
             const isLight = (r + c) % 2 === 0;
             sq.className = `sq ${isLight ? 'light' : 'dark'}`;
             
-            // Coordenada (ex: e4)
             const file = String.fromCharCode(97 + c);
             const rank = 8 - r;
             const coord = file + rank;
-            sq.dataset.square = coord;
 
-            // Peça
             const piece = boardState[r][c];
             if (piece) {
                 sq.innerText = getPieceSymbol(piece.color, piece.type);
             }
 
-            // Highlights
             if (selectedSquare === coord) sq.classList.add('highlight');
             
-            // Mostrar movimentos válidos apenas se for a minha vez
             if (game.turn() === myColor && selectedSquare) {
                 const moves = game.moves({ square: selectedSquare, verbose: true });
                 if (moves.some(m => m.to === coord)) {
@@ -92,20 +108,22 @@ function drawBoard() {
 function handleSquareClick(coord) {
     if (game.game_over() || game.turn() !== myColor) return;
 
-    // Se já clicou numa peça
     if (selectedSquare) {
         const move = game.move({ from: selectedSquare, to: coord, promotion: 'q' });
         if (move) {
             selectedSquare = null;
             drawBoard();
             updateHistory(move);
-            // Enviar para o servidor para o outro jogador ver
-            socket.emit('move', { roomId: roomId, fen: game.fen(), move: { from: move.from, to: move.to, promotion: move.promotion } });
+            
+            if (isOnline) {
+                socket.emit('move', { roomId: roomId, fen: game.fen(), move: { from: move.from, to: move.to, promotion: move.promotion } });
+            } else {
+                setTimeout(makeAIMove, 500);
+            }
             return;
         }
     }
 
-    // Selecionar nova peça
     const piece = game.get(coord);
     if (piece && piece.color === myColor) {
         selectedSquare = coord;
@@ -115,6 +133,56 @@ function handleSquareClick(coord) {
     drawBoard();
 }
 
+// ==========================================
+// IA (Contra o Computador)
+// ==========================================
+function makeAIMove() {
+    if (game.game_over()) return;
+    const moves = game.moves();
+    if (moves.length === 0) return;
+
+    let bestMove = null;
+    let bestScore = -Infinity;
+
+    for (let move of moves) {
+        game.move(move);
+        let score = evaluateBoard();
+        game.undo();
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+        }
+    }
+
+    if (bestMove) {
+        const moveObj = game.move(bestMove);
+        drawBoard();
+        updateHistory(moveObj);
+    }
+}
+
+function evaluateBoard() {
+    const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
+    let score = 0;
+    const board = game.board();
+    
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece) {
+                const val = pieceValues[piece.type];
+                if (piece.color === 'b') score += val;
+                else score -= val;
+            }
+        }
+    }
+    return score + Math.random() * 5;
+}
+
+// ==========================================
+// UTILITÁRIOS
+// ==========================================
 function getPieceSymbol(color, type) {
     const symbols = {
         'w': { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
@@ -129,11 +197,4 @@ function updateHistory(move) {
     li.innerText = `${move.color === 'w' ? 'Brancas' : 'Pretas'}: ${move.san}`;
     list.appendChild(li);
     list.scrollTop = list.scrollHeight;
-}
-
-function resign() {
-    if(confirm("Tens a certeza que queres desistir?")) {
-        alert("Desististe. O oponente ganhou.");
-        location.reload();
-    }
 }
