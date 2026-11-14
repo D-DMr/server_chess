@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Neon Chess | Premium</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- BIBLIOTECA SOCKET.IO PARA O JOGO ONLINE -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+    <!-- SIDEBAR (Menu de Navegação) -->
+    <aside class="sidebar">
+        <div class="logo-icon">♞</div>
+        <button class="nav-btn active" onclick="switchView('home-view', this)">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        </button>
+        <button class="nav-btn" onclick="switchView('play-view', this)">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="nav-btn" onclick="switchView('settings-view', this)">
+            <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+        </button>
+        <div class="sidebar-bottom">
+            <button class="nav-btn" onclick="openAdminLogin()">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/></svg>
+            </button>
+            <div class="avatar-small" onclick="openLogin()" id="sidebar-avatar">G</div>
+        </div>
+    </aside>
+
+    <!-- MAIN WRAPPER -->
+    <main class="main-wrapper">
+        
+        <!-- VIEW: DASHBOARD -->
+        <section id="home-view" class="view-section active">
+            <div class="dash-container">
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="avatar-large" id="dash-avatar">G</div>
+                        <div class="profile-info">
+                            <h2 id="dash-name">Convidado</h2>
+                            <p><span style="font-size: 1.2rem;">🇵🇹</span> Portugal</p>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-box"><h4>Rating</h4><div style="color: var(--accent-blue);" id="dash-rating">1200</div></div>
+                        <div class="stat-box"><h4>Partidas</h4><div id="dash-total">0</div></div>
+                        <div class="stat-box"><h4>Win Rate</h4><div style="color: var(--accent);" id="dash-winrate">0%</div></div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; color: var(--text-muted);">
+                            <span id="dash-wins-text">0 Vitórias</span>
+                            <span id="dash-losses-text">0 Derrotas</span>
+                        </div>
+                        <div class="win-rate-bar"><div class="win-rate-fill" id="dash-winrate-bar" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="action-grid">
+                    <div class="action-card" onclick="startGame('pvc')">
+                        <div class="icon-large">🤖</div>
+                        <h2>Jogar vs Computador</h2>
+                        <p>Modo Casual. Treina sem afetar o rank.</p>
+                    </div>
+                    <div class="action-card" onclick="startGame('online')">
+                        <div class="icon-large">🌐</div>
+                        <h2>Jogar Online (Ranked)</h2>
+                        <p>Encontra um adversário e ganha ELO.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: SALA DE JOGO -->
+        <section id="play-view" class="view-section">
+            <div class="game-area">
+                <div class="player-strip">
+                    <div class="player-details">
+                        <div class="player-avatar">🤖</div>
+                        <div><div style="font-weight: bold; font-size: 0.9rem;" id="opp-name">Oponente</div><div style="font-size: 0.75rem; color: var(--text-muted);" id="opp-rating">---</div></div>
+                    </div>
+                    <div class="clock" id="clock-top">10:00</div>
+                </div>
+                <div class="board-container"><div id="board"></div></div>
+                <div class="player-strip">
+                    <div class="player-details">
+                        <div class="player-avatar" id="game-avatar">G</div>
+                        <div><div style="font-weight: bold; font-size: 0.9rem;" id="game-name">Tu</div><div style="font-size: 0.75rem; color: var(--text-muted);" id="game-rating">1200</div></div>
+                    </div>
+                    <div class="clock active" id="clock-bottom">10:00</div>
+                </div>
+            </div>
+            <div class="game-sidebar" id="game-sidebar">
+                <div class="move-history-title"><span>Movimentos</span><button class="btn-close-history" onclick="document.getElementById('game-sidebar').classList.remove('open')">✖</button></div>
+                <ul class="move-list" id="move-list"></ul>
+                <div class="game-actions">
+                    <button class="btn-game" onclick="askNewGame()">Novo Jogo</button>
+                    <button class="btn-game danger" onclick="askResign()">Desistir</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: DEFINIÇÕES -->
+        <section id="settings-view" class="view-section" style="padding: 40px; align-items: center;">
+            <div class="profile-card" style="width: 100%; max-width: 500px;">
+                <h2 style="margin-bottom: 20px;">Definições</h2>
+                <div class="form-group"><label>Interface</label><select id="set-theme" onchange="applySettings()"><option value="dark">Escuro (Cyberpunk)</option><option value="light">Claro (Clássico)</option></select></div>
+                <div class="form-group"><label>Estilo das Peças</label><select id="set-pieces" onchange="applySettings()"><option value="classic">Clássico (Unicode)</option><option value="modern">Neon Sólido</option><option value="outline">Contorno</option><option value="letters">Letras</option></select></div>
+                <div class="form-group"><label>Cor do Tabuleiro</label><select id="set-board" onchange="applySettings()"><option value="classic">Madeira (Clássico)</option><option value="dark">Neon Escuro</option><option value="cyberpunk">Azul Cyberpunk</option><option value="emerald">Esmeralda</option><option value="purple">Roxo Místico</option></select></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAIS (Login, Admin, Confirmação, Promoção) -->
+    <div class="modal-overlay" id="login-modal"><div class="modal-box"><h2>Entrar / Registar</h2><div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="exemplo@email.com"></div><div class="form-group"><label>Nome de Jogador</label><input type="text" id="login-name" placeholder="O teu nome" maxlength="15"></div><button class="btn-primary" onclick="doLogin()">Entrar</button><button class="btn-secondary" onclick="closeModal('login-modal')">Cancelar</button></div></div>
+    <div class="modal-overlay" id="admin-login-modal"><div class="modal-box"><h2>👑 Área Restrita</h2><div class="form-group"><label>Password</label><input type="password" id="admin-pass" placeholder="admin"></div><button class="btn-primary" style="background: var(--accent-blue);" onclick="checkAdmin()">Entrar</button><button class="btn-secondary" onclick="closeModal('admin-login-modal')">Fechar</button></div></div>
+    <div class="modal-overlay" id="admin-dashboard"><div class="modal-box"><h2>👑 Gestão</h2><div class="form-group"><label>Procurar Jogador (Nome)</label><div style="display: flex; gap: 10px;"><input type="text" id="admin-search" placeholder="Nome exato"><button class="btn-primary" style="width: auto; margin: 0; padding: 0 15px;" onclick="searchPlayer()">Procurar</button></div></div><div id="admin-result" style="display: none; background: var(--bg-base); padding: 15px; border-radius: 8px; margin-bottom: 15px;"><p style="color: var(--text-muted); font-size: 0.9rem;">Jogador: <strong id="admin-target-name" style="color: var(--accent);"></strong></p><p style="color: var(--text-muted); font-size: 0.9rem;">Pontos: <strong id="admin-target-pts"></strong></p></div><div class="form-group"><label>Pontos</label><input type="number" id="admin-amount" placeholder="Ex: 500"></div><div style="display: flex; gap: 10px;"><button class="btn-primary" style="background: var(--danger);" onclick="modifyPoints('remove')">Remover</button><button class="btn-primary" onclick="modifyPoints('add')">Adicionar</button></div><button class="btn-secondary" onclick="closeModal('admin-dashboard')">Fechar</button></div></div>
+    <div class="modal-overlay" id="confirm-modal"><div class="modal-box"><h2 id="confirm-title">Título</h2><p id="confirm-msg" style="color: var(--text-muted); margin-bottom: 20px;">Mensagem</p><div style="display: flex; gap: 10px;"><button class="btn-secondary" onclick="closeConfirm(false)">Cancelar</button><button class="btn-primary" id="confirm-btn-yes" onclick="closeConfirm(true)">Sim</button></div></div></div>
+    <div class="modal-overlay" id="promo-modal"><div class="modal-box" style="text-align: center;"><h2>Promover Peão</h2><div style="display: flex; justify-content: center; gap: 20px; font-size: 3rem; cursor: pointer;"><div onclick="selectPromotion('q')" class="piece-w">♕</div><div onclick="selectPromotion('r')" class="piece-w">♖</div><div onclick="selectPromotion('b')" class="piece-w">♗</div><div onclick="selectPromotion('n')" class="piece-w">♘</div></div></div></div>
+    <div id="toast">Notificação</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
