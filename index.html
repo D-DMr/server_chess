@@ -3,126 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Chess | Premium</title>
+    <title>Neon Chess</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- BIBLIOTECA SOCKET.IO PARA O JOGO ONLINE -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        /* CSS DO CHESS.COM (Recriado) */
+        :root {
+            --bg-dark: #302e2b;
+            --bg-panel: #262421;
+            --text-main: #e2e2e2;
+            --text-muted: #9e9e9e;
+            --green: #81b64c;
+            --green-hover: #95d654;
+            --light-sq: #ebecd0;
+            --dark-sq: #739552;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100dvh; overflow: hidden; }
+
+        /* MENU SUPERIOR */
+        .top-bar { position: fixed; top: 0; left: 0; width: 100%; height: 50px; background: #262421; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; border-bottom: 1px solid #3d3b38; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .menu-items { display: flex; gap: 20px; }
+        .menu-items span { font-weight: 600; color: #bababa; cursor: pointer; font-size: 0.9rem; }
+        .menu-items span:hover { color: #fff; }
+
+        /* LAYOUT PRINCIPAL DO JOGO */
+        #game-area { display: flex; width: 100%; height: 100%; padding-top: 50px; justify-content: center; align-items: center; gap: 20px; padding: 60px 20px 20px; }
+        
+        /* COLUNA ESQUERDA: TABULEIRO */
+        .board-column { display: flex; flex-direction: column; width: 100%; max-width: 600px; height: 100%; max-height: 750px; justify-content: center; }
+        
+        /* JOGADORES E RELÓGIOS */
+        .player { display: flex; justify-content: space-between; align-items: center; height: 50px; color: #fff; font-weight: 600; margin: 5px 0; }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 35px; height: 35px; background: #444; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+        .clock { font-family: monospace; font-size: 1.6rem; font-weight: bold; background: #262421; padding: 5px 12px; border-radius: 4px; color: #9e9e9e; }
+        .clock.active { background: #fff; color: #000; }
+
+        /* TABULEIRO */
+        .board-wrapper { width: 100%; aspect-ratio: 1/1; background: #262421; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; }
+        .sq { display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; font-size: 8vw; }
+        @media (min-width: 700px) { .sq { font-size: 55px; } }
+        .sq.light { background-color: var(--light-sq); color: #333; }
+        .sq.dark { background-color: var(--dark-sq); color: #333; }
+        .piece { text-shadow: 0 2px 3px rgba(0,0,0,0.3); z-index: 2; }
+        .hl-dot::before { content: ''; position: absolute; width: 30%; height: 30%; background: rgba(0,0,0,0.15); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1; }
+        .hl-cap::after { content: ''; position: absolute; width: 100%; height: 100%; border: 4px solid rgba(0,0,0,0.15); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1; box-sizing: border-box; }
+        .last-move { background-color: rgba(255, 255, 0, 0.5) !important; }
+        .chk { background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, rgba(255,0,0,0) 70%) !important; }
+
+        /* COLUNA DIREITA: HISTÓRICO E CONTROLO */
+        .side-column { display: flex; flex-direction: column; width: 350px; height: 100%; max-height: 750px; background: #262421; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        
+        .tabs { display: flex; background: #302e2b; border-bottom: 1px solid #3d3b38; }
+        .tab { flex: 1; padding: 15px; text-align: center; font-weight: 600; color: #9e9e9e; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { color: #fff; border-bottom: 2px solid var(--green); background: #262421; }
+
+        .history { flex: 1; overflow-y: auto; padding: 0; list-style: none; }
+        .history li { display: flex; padding: 10px 15px; font-size: 0.95rem; font-weight: 600; border-bottom: 1px solid #3d3b38; }
+        .history li:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .history .num { color: #9e9e9e; width: 40px; }
+        .history .move { width: 50%; color: #fff; }
+
+        .controls { padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #302e2b; }
+        .btn-control { width: 100%; padding: 15px; border-radius: 6px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.2); transition: 0.1s; }
+        .btn-control:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+        .btn-green { background: var(--green); }
+        .btn-green:hover { background: var(--green-hover); }
+        .btn-dark { background: #3d3b38; }
+        .btn-dark:hover { background: #4d4b48; }
+
+        /* MENU INICIAL (OVERLAY) */
+        #menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #302e2b; z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+        #menu-overlay h1 { font-size: 3rem; color: #fff; margin-bottom: 20px; }
+        .menu-btn { width: 300px; padding: 15px; border-radius: 6px; border: none; font-weight: bold; font-size: 1.1rem; cursor: pointer; color: #fff; background: var(--green); }
+        .menu-btn:hover { background: var(--green-hover); }
+        .menu-btn.secondary { background: #3d3b38; }
+        .menu-btn.secondary:hover { background: #4d4b48; }
+
+        /* RESPONSIVO */
+        @media (max-width: 950px) {
+            #game-area { flex-direction: column; padding-top: 60px; padding-bottom: 20px; }
+            .side-column { width: 100%; height: 250px; }
+            .board-column { max-height: 500px; }
+        }
+    </style>
 </head>
 <body>
 
-    <!-- SIDEBAR (Menu de Navegação) -->
-    <aside class="sidebar">
-        <div class="logo-icon">♞</div>
-        <button class="nav-btn active" onclick="switchView('home-view', this)">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        </button>
-        <button class="nav-btn" onclick="switchView('play-view', this)">
-            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="nav-btn" onclick="switchView('settings-view', this)">
-            <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-        </button>
-        <div class="sidebar-bottom">
-            <button class="nav-btn" onclick="openAdminLogin()">
-                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/></svg>
-            </button>
-            <div class="avatar-small" onclick="openLogin()" id="sidebar-avatar">G</div>
+    <div class="top-bar">
+        <div class="logo">♞ Neon Chess</div>
+        <div class="menu-items">
+            <span onclick="location.reload()">Início</span>
+            <span onclick="startGame('pvc')">Jogar vs IA</span>
+            <span onclick="startGame('online')">Jogar Online</span>
         </div>
-    </aside>
+    </div>
 
-    <!-- MAIN WRAPPER -->
-    <main class="main-wrapper">
-        
-        <!-- VIEW: DASHBOARD -->
-        <section id="home-view" class="view-section active">
-            <div class="dash-container">
-                <div class="profile-card">
-                    <div class="profile-header">
-                        <div class="avatar-large" id="dash-avatar">G</div>
-                        <div class="profile-info">
-                            <h2 id="dash-name">Convidado</h2>
-                            <p><span style="font-size: 1.2rem;">🇵🇹</span> Portugal</p>
-                        </div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stat-box"><h4>Rating</h4><div style="color: var(--accent-blue);" id="dash-rating">1200</div></div>
-                        <div class="stat-box"><h4>Partidas</h4><div id="dash-total">0</div></div>
-                        <div class="stat-box"><h4>Win Rate</h4><div style="color: var(--accent);" id="dash-winrate">0%</div></div>
-                    </div>
-                    <div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; color: var(--text-muted);">
-                            <span id="dash-wins-text">0 Vitórias</span>
-                            <span id="dash-losses-text">0 Derrotas</span>
-                        </div>
-                        <div class="win-rate-bar"><div class="win-rate-fill" id="dash-winrate-bar" style="width: 0%;"></div></div>
-                    </div>
-                </div>
-
-                <div class="action-grid">
-                    <div class="action-card" onclick="startGame('pvc')">
-                        <div class="icon-large">🤖</div>
-                        <h2>Jogar vs Computador</h2>
-                        <p>Modo Casual. Treina sem afetar o rank.</p>
-                    </div>
-                    <div class="action-card" onclick="startGame('online')">
-                        <div class="icon-large">🌐</div>
-                        <h2>Jogar Online (Ranked)</h2>
-                        <p>Encontra um adversário e ganha ELO.</p>
-                    </div>
-                </div>
+    <div id="game-area">
+        <!-- TABULEIRO -->
+        <div class="board-column">
+            <div class="player">
+                <div class="player-info"><div class="avatar" id="opp-avatar">O</div> <span id="opp-name">Oponente</span></div>
+                <div class="clock" id="clock-top">10:00</div>
             </div>
-        </section>
-
-        <!-- VIEW: SALA DE JOGO -->
-        <section id="play-view" class="view-section">
-            <div class="game-area">
-                <div class="player-strip">
-                    <div class="player-details">
-                        <div class="player-avatar">🤖</div>
-                        <div><div style="font-weight: bold; font-size: 0.9rem;" id="opp-name">Oponente</div><div style="font-size: 0.75rem; color: var(--text-muted);" id="opp-rating">---</div></div>
-                    </div>
-                    <div class="clock" id="clock-top">10:00</div>
-                </div>
-                <div class="board-container"><div id="board"></div></div>
-                <div class="player-strip">
-                    <div class="player-details">
-                        <div class="player-avatar" id="game-avatar">G</div>
-                        <div><div style="font-weight: bold; font-size: 0.9rem;" id="game-name">Tu</div><div style="font-size: 0.75rem; color: var(--text-muted);" id="game-rating">1200</div></div>
-                    </div>
-                    <div class="clock active" id="clock-bottom">10:00</div>
-                </div>
+            <div class="board-wrapper"><div id="board"></div></div>
+            <div class="player">
+                <div class="player-info"><div class="avatar" id="my-avatar">G</div> <span id="my-name">Convidado</span></div>
+                <div class="clock active" id="clock-bottom">10:00</div>
             </div>
-            <div class="game-sidebar" id="game-sidebar">
-                <div class="move-history-title"><span>Movimentos</span><button class="btn-close-history" onclick="document.getElementById('game-sidebar').classList.remove('open')">✖</button></div>
-                <ul class="move-list" id="move-list"></ul>
-                <div class="game-actions">
-                    <button class="btn-game" onclick="askNewGame()">Novo Jogo</button>
-                    <button class="btn-game danger" onclick="askResign()">Desistir</button>
-                </div>
+        </div>
+
+        <!-- PAINEL LATERAL -->
+        <div class="side-column">
+            <div class="tabs">
+                <div class="tab active">Jogo</div>
             </div>
-        </section>
-
-        <!-- VIEW: DEFINIÇÕES -->
-        <section id="settings-view" class="view-section" style="padding: 40px; align-items: center;">
-            <div class="profile-card" style="width: 100%; max-width: 500px;">
-                <h2 style="margin-bottom: 20px;">Definições</h2>
-                <div class="form-group"><label>Interface</label><select id="set-theme" onchange="applySettings()"><option value="dark">Escuro (Cyberpunk)</option><option value="light">Claro (Clássico)</option></select></div>
-                <div class="form-group"><label>Estilo das Peças</label><select id="set-pieces" onchange="applySettings()"><option value="classic">Clássico (Unicode)</option><option value="modern">Neon Sólido</option><option value="outline">Contorno</option><option value="letters">Letras</option></select></div>
-                <div class="form-group"><label>Cor do Tabuleiro</label><select id="set-board" onchange="applySettings()"><option value="classic">Madeira (Clássico)</option><option value="dark">Neon Escuro</option><option value="cyberpunk">Azul Cyberpunk</option><option value="emerald">Esmeralda</option><option value="purple">Roxo Místico</option></select></div>
+            <ul class="history" id="move-list"></ul>
+            <div class="controls">
+                <button class="btn-control btn-green" onclick="startGame('pvc')">Novo Jogo (IA)</button>
+                <button class="btn-control btn-dark" onclick="if(confirm('Desistir?')) location.reload()">Desistir</button>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <!-- MODAIS (Login, Admin, Confirmação, Promoção) -->
-    <div class="modal-overlay" id="login-modal"><div class="modal-box"><h2>Entrar / Registar</h2><div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="exemplo@email.com"></div><div class="form-group"><label>Nome de Jogador</label><input type="text" id="login-name" placeholder="O teu nome" maxlength="15"></div><button class="btn-primary" onclick="doLogin()">Entrar</button><button class="btn-secondary" onclick="closeModal('login-modal')">Cancelar</button></div></div>
-    <div class="modal-overlay" id="admin-login-modal"><div class="modal-box"><h2>👑 Área Restrita</h2><div class="form-group"><label>Password</label><input type="password" id="admin-pass" placeholder="admin"></div><button class="btn-primary" style="background: var(--accent-blue);" onclick="checkAdmin()">Entrar</button><button class="btn-secondary" onclick="closeModal('admin-login-modal')">Fechar</button></div></div>
-    <div class="modal-overlay" id="admin-dashboard"><div class="modal-box"><h2>👑 Gestão</h2><div class="form-group"><label>Procurar Jogador (Nome)</label><div style="display: flex; gap: 10px;"><input type="text" id="admin-search" placeholder="Nome exato"><button class="btn-primary" style="width: auto; margin: 0; padding: 0 15px;" onclick="searchPlayer()">Procurar</button></div></div><div id="admin-result" style="display: none; background: var(--bg-base); padding: 15px; border-radius: 8px; margin-bottom: 15px;"><p style="color: var(--text-muted); font-size: 0.9rem;">Jogador: <strong id="admin-target-name" style="color: var(--accent);"></strong></p><p style="color: var(--text-muted); font-size: 0.9rem;">Pontos: <strong id="admin-target-pts"></strong></p></div><div class="form-group"><label>Pontos</label><input type="number" id="admin-amount" placeholder="Ex: 500"></div><div style="display: flex; gap: 10px;"><button class="btn-primary" style="background: var(--danger);" onclick="modifyPoints('remove')">Remover</button><button class="btn-primary" onclick="modifyPoints('add')">Adicionar</button></div><button class="btn-secondary" onclick="closeModal('admin-dashboard')">Fechar</button></div></div>
-    <div class="modal-overlay" id="confirm-modal"><div class="modal-box"><h2 id="confirm-title">Título</h2><p id="confirm-msg" style="color: var(--text-muted); margin-bottom: 20px;">Mensagem</p><div style="display: flex; gap: 10px;"><button class="btn-secondary" onclick="closeConfirm(false)">Cancelar</button><button class="btn-primary" id="confirm-btn-yes" onclick="closeConfirm(true)">Sim</button></div></div></div>
-    <div class="modal-overlay" id="promo-modal"><div class="modal-box" style="text-align: center;"><h2>Promover Peão</h2><div style="display: flex; justify-content: center; gap: 20px; font-size: 3rem; cursor: pointer;"><div onclick="selectPromotion('q')" class="piece-w">♕</div><div onclick="selectPromotion('r')" class="piece-w">♖</div><div onclick="selectPromotion('b')" class="piece-w">♗</div><div onclick="selectPromotion('n')" class="piece-w">♘</div></div></div></div>
-    <div id="toast">Notificação</div>
+    <!-- MENU INICIAL -->
+    <div id="menu-overlay">
+        <h1>Neon Chess</h1>
+        <button class="menu-btn" onclick="startGame('online')">Jogar Online (Ranked)</button>
+        <button class="menu-btn secondary" onclick="startGame('pvc')">Jogar vs Computador</button>
+    </div>
 
-    <script src="script.js"></script>
+    <!-- MODAL PROMOÇÃO -->
+    <div id="promo-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:#262421; padding:30px; border-radius:8px; text-align:center;">
+            <h2 style="color:#fff; margin-bottom:20px;">Promover Peão</h2>
+            <div style="display:flex; gap:20px; font-size:4rem; cursor:pointer; color:#fff;">
+                <div onclick="selectPromotion('q')">♕</div>
+                <div onclick="selectPromotion('r')">♖</div>
+                <div onclick="selectPromotion('b')">♗</div>
+                <div onclick="selectPromotion('n')">♘</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // LIGAÇÃO AO RENDER
+        const socket = io('COLA_O_TEU_LINK_DO_RENDER_AQUI'); 
+        let roomId = null;
+
+        // --- MOTOR DE XADREZ ---
+        const boardEl = document.getElementById('board');
+        let board = new Array(64).fill(null);
+        let turn = 'w', selectedSquare = null, legalMovesForSelected = [], history = [], moveNumber = 1, isFlipped = false, gameMode = 'pvc', isGameOver = false, enPassantTarget = null, pendingPromotion = null;
+        let isOnlineGame = false, myOnlineColor = null;
+        let timeWhite = 600, timeBlack = 600, timerInterval = null;
+
+        const initialBoard = [
+            'r','n','b','q','k','b','n','r', 'p','p','p','p','p','p','p','p',
+            null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null,
+            null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null,
+            'P','P','P','P','P','P','P','P', 'R','N','B','Q','K','B','N','R'
+        ];
+        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
+
+        function initBoard() {
+            board = [...initialBoard]; turn = 'w'; selectedSquare = null; legalMovesForSelected = []; history = []; moveNumber = 1; enPassantTarget = null; isGameOver = false;
+            timeWhite = 600; timeBlack = 600;
+            document.getElementById('move-list').innerHTML = ''; 
+            startClock(); renderBoard();
+        }
+
+        function startClock() {
+            if (timerInterval) clearInterval(timerInterval);
+            updateClockUI();
+            timerInterval = setInterval(() => {
+                if (isGameOver) return;
+                if (turn === 'w') timeWhite--; else timeBlack--;
+                if (timeWhite <= 0 || timeBlack <= 0) { isGameOver = true; clearInterval(timerInterval); alert("Tempo esgotado!"); }
+                updateClockUI();
+            }, 1000);
+        }
+
+        function updateClockUI() {
+            const format = (t) => `${Math.floor(t / 60)}:${(t % 60).toString().padStart(2, '0')}`;
+            const cTop = document.getElementById('clock-top'), cBot = document.getElementById('clock-bottom');
+            if (isFlipped) {
+                cTop.innerText = format(timeWhite); cBot.innerText = format(timeBlack);
+                cTop.classList.toggle('active', turn === 'w'); cBot.classList.toggle('active', turn === 'b');
+            } else {
+                cTop.innerText = format(timeBlack); cBot.innerText = format(timeWhite);
+                cTop.classList.toggle('active', turn === 'b'); cBot.classList.toggle('active', turn === 'w');
+            }
+        }
+
+        function startGame(mode) {
+            gameMode = mode; document.getElementById('menu-overlay').style.display = 'none';
+            if (timerInterval) clearInterval(timerInterval);
+            
+            if (mode === 'online') {
+                isOnlineGame = true;
+                document.getElementById('opp-name').innerText = "À espera...";
+                socket.emit('join_game');
+                socket.on('waiting', () => { document.getElementById('opp-name').innerText = "À espera..."; });
+                socket.on('game_start', (data) => {
+                    myOnlineColor = data.color; roomId = data.room;
+                    document.getElementById('opp-name').innerText = "Oponente";
+                    if (myOnlineColor === 'black') isFlipped = true;
+                    initBoard();
+                });
+                socket.on('move', (move) => {
+                    board[move.to] = move.piece; board[move.from] = null; turn = turn === 'w' ? 'b' : 'w';
+                    renderBoard(); checkGameState(); updateClockUI();
+                });
+            } else {
+                isOnlineGame = false;
+                document.getElementById('opp-name').innerText = "Computador";
+                isFlipped = false; initBoard();
+            }
+        }
+
+        function getPseudoMoves(pos, piece, cb, ep) {
+            let moves = []; const row = Math.floor(pos / 8), col = pos % 8, isW = piece === piece.toUpperCase();
+            const add = (r, c) => { if (r >= 0 && r < 8 && c >= 0 && c < 8) { const tPos = r * 8 + c, tPiece = cb[tPos]; if (!tPiece || (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase())) moves.push({ from: pos, to: tPos, piece, captured: tPiece }); } };
+            const p = piece.toLowerCase();
+            if (p === 'p') {
+                const dir = isW ? -1 : 1, start = isW ? 6 : 1;
+                if (row + dir >= 0 && row + dir < 8 && !cb[(row + dir) * 8 + col]) {
+                    moves.push({ from: pos, to: (row + dir) * 8 + col, piece });
+                    if (row === start && !cb[(row + 2 * dir) * 8 + col]) moves.push({ from: pos, to: (row + 2 * dir) * 8 + col, piece });
+                }
+                for (const dc of [-1, 1]) {
+                    if (col + dc >= 0 && col + dc < 8) {
+                        const tPos = (row + dir) * 8 + (col + dc);
+                        if (row + dir >= 0 && row + dir < 8) {
+                            const tPiece = cb[tPos];
+                            if (tPiece && (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase())) moves.push({ from: pos, to: tPos, piece, captured: tPiece });
+                            if (tPos === ep) moves.push({ from: pos, to: tPos, piece, captured: isW ? 'p' : 'P', isEnPassant: true });
+                        }
+                    }
+                }
+            } else if (p === 'n') { [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr, dc]) => add(row + dr, col + dc)); }
+            else if (p === 'b' || p === 'r' || p === 'q') {
+                const dirs = [];
+                if (p === 'b' || p === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+                if (p === 'r' || p === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+                for (let [dr, dc] of dirs) {
+                    let r = row + dr, c = col + dc;
+                    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                        const tPos = r * 8 + c, tPiece = cb[tPos];
+                        if (!tPiece) moves.push({ from: pos, to: tPos, piece });
+                        else { if (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase()) moves.push({ from: pos, to: tPos, piece, captured: tPiece }); break; }
+                        r += dr; c += dc;
+                    }
+                }
+            } else if (p === 'k') { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (dr !== 0 || dc !== 0) add(row + dr, col + dc); }
+            return moves;
+        }
+
+        function getLegalMoves(pos, piece, cb, ep) {
+            return getPseudoMoves(pos, piece, cb, ep).filter(m => {
+                const tb = [...cb]; tb[m.to] = piece; tb[m.from] = null;
+                if (m.isEnPassant) tb[piece === piece.toUpperCase() ? m.to + 8 : m.to - 8] = null;
+                return !isCheck(piece === piece.toUpperCase() ? 'w' : 'b', tb);
+            });
+        }
+
+        function isCheck(color, cb) {
+            const k = color === 'w' ? 'K' : 'k', pos = cb.indexOf(k);
+            if (pos === -1) return false;
+            const e = color === 'w' ? 'b' : 'w';
+            for (let i = 0; i < 64; i++) {
+                const p = cb[i];
+                if (p && (e === 'w' ? p === p.toUpperCase() : p === p.toLowerCase())) { if (getPseudoMoves(i, p, cb, null).some(m => m.to === pos)) return true; }
+            }
+            return false;
+        }
+
+        function checkGameState() {
+            let hasMoves = false;
+            for (let i = 0; i < 64; i++) {
+                const p = board[i];
+                if (p && (turn === 'w' ? p === p.toUpperCase() : p === p.toLowerCase())) { if (getLegalMoves(i, p, board, enPassantTarget).length > 0) { hasMoves = true; break; } }
+            }
+            if (!hasMoves) {
+                isGameOver = true; clearInterval(timerInterval);
+                if (isCheck(turn, board)) alert(`Xeque-Mate!`);
+                else alert("Empate (Afogamento)");
+            }
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            const inCheck = !isGameOver && isCheck(turn, board);
+            const kPos = board.indexOf(turn === 'w' ? 'K' : 'k');
+            for (let i = 0; i < 64; i++) {
+                const act = isFlipped ? (63 - i) : i, r = Math.floor(act / 8), c = act % 8;
+                const sq = document.createElement('div');
+                sq.className = `sq ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                if (selectedSquare === act) sq.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+                if (history.length > 0) { const last = history[history.length-1]; if (last && (last.from === act || last.to === act)) sq.classList.add('last-move'); }
+                const move = legalMovesForSelected.find(m => m.to === act);
+                if (move) sq.classList.add(move.captured ? 'hl-cap' : 'hl-dot');
+                if (inCheck && act === kPos) sq.classList.add('chk');
+                const p = board[act];
+                if (p) sq.innerHTML = `<span class="piece">${getPieceChar(p)}</span>`; 
+                sq.onclick = () => handleSquareClick(act);
+                boardEl.appendChild(sq);
+            }
+        }
+
+        function getPieceChar(p) {
+            const THEMES = {
+                classic: { 'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙', 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
+            };
+            return THEMES.classic[p] || p;
+        }
+
+        function handleSquareClick(idx) {
+            if (isGameOver || (isOnlineGame && turn !== myOnlineColor) || (gameMode === 'pvc' && turn === 'b')) return;
+            const clicked = board[idx];
+            if (selectedSquare !== null) { const move = legalMovesForSelected.find(m => m.to === idx); if (move) { executeMove(move); return; } }
+            if (clicked) {
+                const isW = clicked === clicked.toUpperCase();
+                if ((turn === 'w' && isW) || (turn === 'b' && !isW)) { selectedSquare = idx; legalMovesForSelected = getLegalMoves(idx, clicked, board, enPassantTarget); } else { selectedSquare = null; legalMovesForSelected = []; }
+            } else { selectedSquare = null; legalMovesForSelected = []; }
+            renderBoard();
+        }
+
+        function executeMove(move) {
+            const isPawn = move.piece.toLowerCase() === 'p';
+            const isProm = (move.piece === 'P' && Math.floor(move.to / 8) === 0) || (move.piece === 'p' && Math.floor(move.to / 8) === 7);
+            if (isPawn && isProm) { pendingPromotion = move; document.getElementById('promo-modal').style.display = 'flex'; return; }
+            finalizeMove(move);
+        }
+
+        function selectPromotion(type) {
+            document.getElementById('promo-modal').style.display = 'none';
+            if (pendingPromotion) { pendingPromotion.piece = pendingPromotion.piece === 'P' ? type.toUpperCase() : type.toLowerCase(); finalizeMove(pendingPromotion); pendingPromotion = null; }
+        }
+
+        function finalizeMove(move) {
+            history.push({ from: move.from, to: move.to, board: [...board] });
+            board[move.to] = move.piece; board[move.from] = null;
+            if (move.isEnPassant) board[move.piece === 'P' ? move.to + 8 : move.to - 8] = null;
+            enPassantTarget = null;
+            if (move.piece.toLowerCase() === 'p' && Math.abs(move.to - move.from) === 16) enPassantTarget = (move.to + move.from) / 2;
+
+            const note = `${move.piece.toUpperCase()}${String.fromCharCode(97 + (move.from % 8))}${8 - Math.floor(move.from / 8)}-${String.fromCharCode(97 + (move.to % 8))}${8 - Math.floor(move.to / 8)}`;
+            if (turn === 'b') { 
+                document.getElementById('move-list').innerHTML += `<li><span class="num">${moveNumber}.</span><span class="move">${note}</span></li>`; moveNumber++; 
+            } else {
+                const last = document.getElementById('move-list').lastElementChild;
+                if (last) last.innerHTML += ` <span class="move">${note}</span>`;
+                else { document.getElementById('move-list').innerHTML += `<li><span class="num">${moveNumber}.</span><span class="move">...</span><span class="move">${note}</span></li>`; }
+            }
+
+            turn = turn === 'w' ? 'b' : 'w'; selectedSquare = null; legalMovesForSelected = [];
+            renderBoard(); checkGameState(); updateClockUI();
+
+            if (isOnlineGame && roomId) socket.emit('move', { room: roomId, move: move });
+            if (gameMode === 'pvc' && turn === 'b' && !isGameOver) setTimeout(makeAIMove, 500);
+        }
+
+        function makeAIMove() {
+            if (isGameOver) return;
+            let best = null, bestScore = -Infinity;
+            for (let i = 0; i < 64; i++) {
+                const p = board[i];
+                if (p && p === p.toLowerCase()) {
+                    const moves = getLegalMoves(i, p, board, enPassantTarget);
+                    for (let m of moves) {
+                        const tb = [...board]; tb[m.to] = m.piece; tb[m.from] = null;
+                        if (m.isEnPassant) tb[m.to - 8] = null;
+                        let sc = evalBoard(tb);
+                        if (isCheck('b', tb)) sc -= 50;
+                        sc += Math.random() * 10;
+                        if (sc > bestScore) { bestScore = sc; best = m; }
+                    }
+                }
+            }
+            if (best) executeMove(best);
+        }
+
+        function evalBoard(cb) {
+            let sc = 0;
+            for (let p of cb) { if (p) { const v = pieceValues[p.toLowerCase()]; if (p === p.toLowerCase()) sc += v; else sc -= v; } }
+            return sc;
+        }
+
+    </script>
 </body>
 </html>
