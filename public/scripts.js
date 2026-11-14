@@ -8,7 +8,7 @@ let selectedSquare = null;
 let isOnline = false;
 
 // ==========================================
-// NAVEGAÇÃO
+// NAVEGAÇÃO E MENUS
 // ==========================================
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -25,7 +25,7 @@ function startAI() {
 }
 
 // ==========================================
-// ONLINE (SOCKET.IO)
+// LIGAÇÃO AO SERVIDOR (ONLINE)
 // ==========================================
 function createRoom() {
     const name = document.getElementById('player-name').value || "Jogador";
@@ -68,7 +68,7 @@ socket.on('move', (move) => {
 socket.on('error_msg', (msg) => alert(msg));
 
 // ==========================================
-// LÓGICA DO TABULEIRO E RENDERIZAÇÃO
+// RENDERIZAÇÃO E JOGO
 // ==========================================
 function drawBoard() {
     const boardEl = document.getElementById('board');
@@ -134,7 +134,7 @@ function handleSquareClick(coord) {
 }
 
 // ==========================================
-// IA (Contra o Computador)
+// INTELIGÊNCIA ARTIFICIAL
 // ==========================================
 function makeAIMove() {
     if (game.game_over()) return;
@@ -177,11 +177,11 @@ function evaluateBoard() {
             }
         }
     }
-    return score + Math.random() * 5;
+    return score + Math.random() * 5; // Aleatoriedade para variar
 }
 
 // ==========================================
-// UTILITÁRIOS
+// UTILS
 // ==========================================
 function getPieceSymbol(color, type) {
     const symbols = {
