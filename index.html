@@ -2,400 +2,58 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Neon Chess</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Chess | Pro</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-        /* CSS DO CHESS.COM (Recriado) */
-        :root {
-            --bg-dark: #302e2b;
-            --bg-panel: #262421;
-            --text-main: #e2e2e2;
-            --text-muted: #9e9e9e;
-            --green: #81b64c;
-            --green-hover: #95d654;
-            --light-sq: #ebecd0;
-            --dark-sq: #739552;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100dvh; overflow: hidden; }
-
-        /* MENU SUPERIOR */
-        .top-bar { position: fixed; top: 0; left: 0; width: 100%; height: 50px; background: #262421; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; border-bottom: 1px solid #3d3b38; }
-        .logo { font-size: 1.5rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 10px; }
-        .menu-items { display: flex; gap: 20px; }
-        .menu-items span { font-weight: 600; color: #bababa; cursor: pointer; font-size: 0.9rem; }
-        .menu-items span:hover { color: #fff; }
-
-        /* LAYOUT PRINCIPAL DO JOGO */
-        #game-area { display: flex; width: 100%; height: 100%; padding-top: 50px; justify-content: center; align-items: center; gap: 20px; padding: 60px 20px 20px; }
-        
-        /* COLUNA ESQUERDA: TABULEIRO */
-        .board-column { display: flex; flex-direction: column; width: 100%; max-width: 600px; height: 100%; max-height: 750px; justify-content: center; }
-        
-        /* JOGADORES E RELÓGIOS */
-        .player { display: flex; justify-content: space-between; align-items: center; height: 50px; color: #fff; font-weight: 600; margin: 5px 0; }
-        .player-info { display: flex; align-items: center; gap: 10px; }
-        .avatar { width: 35px; height: 35px; background: #444; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; }
-        .clock { font-family: monospace; font-size: 1.6rem; font-weight: bold; background: #262421; padding: 5px 12px; border-radius: 4px; color: #9e9e9e; }
-        .clock.active { background: #fff; color: #000; }
-
-        /* TABULEIRO */
-        .board-wrapper { width: 100%; aspect-ratio: 1/1; background: #262421; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        #board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; }
-        .sq { display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; font-size: 8vw; }
-        @media (min-width: 700px) { .sq { font-size: 55px; } }
-        .sq.light { background-color: var(--light-sq); color: #333; }
-        .sq.dark { background-color: var(--dark-sq); color: #333; }
-        .piece { text-shadow: 0 2px 3px rgba(0,0,0,0.3); z-index: 2; }
-        .hl-dot::before { content: ''; position: absolute; width: 30%; height: 30%; background: rgba(0,0,0,0.15); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1; }
-        .hl-cap::after { content: ''; position: absolute; width: 100%; height: 100%; border: 4px solid rgba(0,0,0,0.15); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1; box-sizing: border-box; }
-        .last-move { background-color: rgba(255, 255, 0, 0.5) !important; }
-        .chk { background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, rgba(255,0,0,0) 70%) !important; }
-
-        /* COLUNA DIREITA: HISTÓRICO E CONTROLO */
-        .side-column { display: flex; flex-direction: column; width: 350px; height: 100%; max-height: 750px; background: #262421; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        
-        .tabs { display: flex; background: #302e2b; border-bottom: 1px solid #3d3b38; }
-        .tab { flex: 1; padding: 15px; text-align: center; font-weight: 600; color: #9e9e9e; cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab.active { color: #fff; border-bottom: 2px solid var(--green); background: #262421; }
-
-        .history { flex: 1; overflow-y: auto; padding: 0; list-style: none; }
-        .history li { display: flex; padding: 10px 15px; font-size: 0.95rem; font-weight: 600; border-bottom: 1px solid #3d3b38; }
-        .history li:nth-child(even) { background: rgba(255,255,255,0.02); }
-        .history .num { color: #9e9e9e; width: 40px; }
-        .history .move { width: 50%; color: #fff; }
-
-        .controls { padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #302e2b; }
-        .btn-control { width: 100%; padding: 15px; border-radius: 6px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.2); transition: 0.1s; }
-        .btn-control:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-        .btn-green { background: var(--green); }
-        .btn-green:hover { background: var(--green-hover); }
-        .btn-dark { background: #3d3b38; }
-        .btn-dark:hover { background: #4d4b48; }
-
-        /* MENU INICIAL (OVERLAY) */
-        #menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #302e2b; z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
-        #menu-overlay h1 { font-size: 3rem; color: #fff; margin-bottom: 20px; }
-        .menu-btn { width: 300px; padding: 15px; border-radius: 6px; border: none; font-weight: bold; font-size: 1.1rem; cursor: pointer; color: #fff; background: var(--green); }
-        .menu-btn:hover { background: var(--green-hover); }
-        .menu-btn.secondary { background: #3d3b38; }
-        .menu-btn.secondary:hover { background: #4d4b48; }
-
-        /* RESPONSIVO */
-        @media (max-width: 950px) {
-            #game-area { flex-direction: column; padding-top: 60px; padding-bottom: 20px; }
-            .side-column { width: 100%; height: 250px; }
-            .board-column { max-height: 500px; }
-        }
-    </style>
+    <!-- BIBLIOTECA CHESS.JS PARA VALIDAR AS REGRAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="logo">♞ Neon Chess</div>
-        <div class="menu-items">
-            <span onclick="location.reload()">Início</span>
-            <span onclick="startGame('pvc')">Jogar vs IA</span>
-            <span onclick="startGame('online')">Jogar Online</span>
-        </div>
-    </div>
-
-    <div id="game-area">
-        <!-- TABULEIRO -->
-        <div class="board-column">
-            <div class="player">
-                <div class="player-info"><div class="avatar" id="opp-avatar">O</div> <span id="opp-name">Oponente</span></div>
-                <div class="clock" id="clock-top">10:00</div>
-            </div>
-            <div class="board-wrapper"><div id="board"></div></div>
-            <div class="player">
-                <div class="player-info"><div class="avatar" id="my-avatar">G</div> <span id="my-name">Convidado</span></div>
-                <div class="clock active" id="clock-bottom">10:00</div>
-            </div>
-        </div>
-
-        <!-- PAINEL LATERAL -->
-        <div class="side-column">
-            <div class="tabs">
-                <div class="tab active">Jogo</div>
-            </div>
-            <ul class="history" id="move-list"></ul>
-            <div class="controls">
-                <button class="btn-control btn-green" onclick="startGame('pvc')">Novo Jogo (IA)</button>
-                <button class="btn-control btn-dark" onclick="if(confirm('Desistir?')) location.reload()">Desistir</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MENU INICIAL -->
-    <div id="menu-overlay">
+    <!-- ECRÃ DE MENU INICIAL -->
+    <div id="menu-screen">
         <h1>Neon Chess</h1>
-        <button class="menu-btn" onclick="startGame('online')">Jogar Online (Ranked)</button>
-        <button class="menu-btn secondary" onclick="startGame('pvc')">Jogar vs Computador</button>
+        <input type="text" id="player-name" placeholder="O teu nome" value="Jogador">
+        <button onclick="createRoom()">Criar Jogo</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <input type="text" id="join-code" placeholder="Código da Sala">
+            <button onclick="joinRoom()">Entrar</button>
+        </div>
     </div>
 
-    <!-- MODAL PROMOÇÃO -->
-    <div id="promo-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
-        <div style="background:#262421; padding:30px; border-radius:8px; text-align:center;">
-            <h2 style="color:#fff; margin-bottom:20px;">Promover Peão</h2>
-            <div style="display:flex; gap:20px; font-size:4rem; cursor:pointer; color:#fff;">
-                <div onclick="selectPromotion('q')">♕</div>
-                <div onclick="selectPromotion('r')">♖</div>
-                <div onclick="selectPromotion('b')">♗</div>
-                <div onclick="selectPromotion('n')">♘</div>
+    <!-- ECRÃ DE JOGO -->
+    <div id="game-screen" style="display:none;">
+        <div class="top-bar">
+            <div class="logo">♞ Neon Chess</div>
+            <div id="room-display">Sala: ---</div>
+        </div>
+
+        <div class="game-layout">
+            <!-- Tabuleiro -->
+            <div class="board-column">
+                <div class="player-info top">
+                    <span id="opp-name">Oponente</span>
+                    <div class="clock" id="clock-top">10:00</div>
+                </div>
+                <div id="board"></div>
+                <div class="player-info bottom">
+                    <span id="my-name">Tu</span>
+                    <div class="clock active" id="clock-bottom">10:00</div>
+                </div>
+            </div>
+
+            <!-- Painel Lateral -->
+            <div class="side-panel">
+                <div class="panel-header">Movimentos</div>
+                <ul id="move-history"></ul>
+                <div class="panel-footer">
+                    <button onclick="resign()" class="btn-danger">Desistir</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // LIGAÇÃO AO RENDER
-        const socket = io('https://server-chess-zazq.onrender.com/'); 
-        let roomId = null;
-
-        // --- MOTOR DE XADREZ ---
-        const boardEl = document.getElementById('board');
-        let board = new Array(64).fill(null);
-        let turn = 'w', selectedSquare = null, legalMovesForSelected = [], history = [], moveNumber = 1, isFlipped = false, gameMode = 'pvc', isGameOver = false, enPassantTarget = null, pendingPromotion = null;
-        let isOnlineGame = false, myOnlineColor = null;
-        let timeWhite = 600, timeBlack = 600, timerInterval = null;
-
-        const initialBoard = [
-            'r','n','b','q','k','b','n','r', 'p','p','p','p','p','p','p','p',
-            null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null,
-            null,null,null,null,null,null,null,null, null,null,null,null,null,null,null,null,
-            'P','P','P','P','P','P','P','P', 'R','N','B','Q','K','B','N','R'
-        ];
-        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
-
-        function initBoard() {
-            board = [...initialBoard]; turn = 'w'; selectedSquare = null; legalMovesForSelected = []; history = []; moveNumber = 1; enPassantTarget = null; isGameOver = false;
-            timeWhite = 600; timeBlack = 600;
-            document.getElementById('move-list').innerHTML = ''; 
-            startClock(); renderBoard();
-        }
-
-        function startClock() {
-            if (timerInterval) clearInterval(timerInterval);
-            updateClockUI();
-            timerInterval = setInterval(() => {
-                if (isGameOver) return;
-                if (turn === 'w') timeWhite--; else timeBlack--;
-                if (timeWhite <= 0 || timeBlack <= 0) { isGameOver = true; clearInterval(timerInterval); alert("Tempo esgotado!"); }
-                updateClockUI();
-            }, 1000);
-        }
-
-        function updateClockUI() {
-            const format = (t) => `${Math.floor(t / 60)}:${(t % 60).toString().padStart(2, '0')}`;
-            const cTop = document.getElementById('clock-top'), cBot = document.getElementById('clock-bottom');
-            if (isFlipped) {
-                cTop.innerText = format(timeWhite); cBot.innerText = format(timeBlack);
-                cTop.classList.toggle('active', turn === 'w'); cBot.classList.toggle('active', turn === 'b');
-            } else {
-                cTop.innerText = format(timeBlack); cBot.innerText = format(timeWhite);
-                cTop.classList.toggle('active', turn === 'b'); cBot.classList.toggle('active', turn === 'w');
-            }
-        }
-
-        function startGame(mode) {
-            gameMode = mode; document.getElementById('menu-overlay').style.display = 'none';
-            if (timerInterval) clearInterval(timerInterval);
-            
-            if (mode === 'online') {
-                isOnlineGame = true;
-                document.getElementById('opp-name').innerText = "À espera...";
-                socket.emit('join_game');
-                socket.on('waiting', () => { document.getElementById('opp-name').innerText = "À espera..."; });
-                socket.on('game_start', (data) => {
-                    myOnlineColor = data.color; roomId = data.room;
-                    document.getElementById('opp-name').innerText = "Oponente";
-                    if (myOnlineColor === 'black') isFlipped = true;
-                    initBoard();
-                });
-                socket.on('move', (move) => {
-                    board[move.to] = move.piece; board[move.from] = null; turn = turn === 'w' ? 'b' : 'w';
-                    renderBoard(); checkGameState(); updateClockUI();
-                });
-            } else {
-                isOnlineGame = false;
-                document.getElementById('opp-name').innerText = "Computador";
-                isFlipped = false; initBoard();
-            }
-        }
-
-        function getPseudoMoves(pos, piece, cb, ep) {
-            let moves = []; const row = Math.floor(pos / 8), col = pos % 8, isW = piece === piece.toUpperCase();
-            const add = (r, c) => { if (r >= 0 && r < 8 && c >= 0 && c < 8) { const tPos = r * 8 + c, tPiece = cb[tPos]; if (!tPiece || (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase())) moves.push({ from: pos, to: tPos, piece, captured: tPiece }); } };
-            const p = piece.toLowerCase();
-            if (p === 'p') {
-                const dir = isW ? -1 : 1, start = isW ? 6 : 1;
-                if (row + dir >= 0 && row + dir < 8 && !cb[(row + dir) * 8 + col]) {
-                    moves.push({ from: pos, to: (row + dir) * 8 + col, piece });
-                    if (row === start && !cb[(row + 2 * dir) * 8 + col]) moves.push({ from: pos, to: (row + 2 * dir) * 8 + col, piece });
-                }
-                for (const dc of [-1, 1]) {
-                    if (col + dc >= 0 && col + dc < 8) {
-                        const tPos = (row + dir) * 8 + (col + dc);
-                        if (row + dir >= 0 && row + dir < 8) {
-                            const tPiece = cb[tPos];
-                            if (tPiece && (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase())) moves.push({ from: pos, to: tPos, piece, captured: tPiece });
-                            if (tPos === ep) moves.push({ from: pos, to: tPos, piece, captured: isW ? 'p' : 'P', isEnPassant: true });
-                        }
-                    }
-                }
-            } else if (p === 'n') { [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr, dc]) => add(row + dr, col + dc)); }
-            else if (p === 'b' || p === 'r' || p === 'q') {
-                const dirs = [];
-                if (p === 'b' || p === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
-                if (p === 'r' || p === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
-                for (let [dr, dc] of dirs) {
-                    let r = row + dr, c = col + dc;
-                    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
-                        const tPos = r * 8 + c, tPiece = cb[tPos];
-                        if (!tPiece) moves.push({ from: pos, to: tPos, piece });
-                        else { if (isW ? tPiece === tPiece.toLowerCase() : tPiece === tPiece.toUpperCase()) moves.push({ from: pos, to: tPos, piece, captured: tPiece }); break; }
-                        r += dr; c += dc;
-                    }
-                }
-            } else if (p === 'k') { for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (dr !== 0 || dc !== 0) add(row + dr, col + dc); }
-            return moves;
-        }
-
-        function getLegalMoves(pos, piece, cb, ep) {
-            return getPseudoMoves(pos, piece, cb, ep).filter(m => {
-                const tb = [...cb]; tb[m.to] = piece; tb[m.from] = null;
-                if (m.isEnPassant) tb[piece === piece.toUpperCase() ? m.to + 8 : m.to - 8] = null;
-                return !isCheck(piece === piece.toUpperCase() ? 'w' : 'b', tb);
-            });
-        }
-
-        function isCheck(color, cb) {
-            const k = color === 'w' ? 'K' : 'k', pos = cb.indexOf(k);
-            if (pos === -1) return false;
-            const e = color === 'w' ? 'b' : 'w';
-            for (let i = 0; i < 64; i++) {
-                const p = cb[i];
-                if (p && (e === 'w' ? p === p.toUpperCase() : p === p.toLowerCase())) { if (getPseudoMoves(i, p, cb, null).some(m => m.to === pos)) return true; }
-            }
-            return false;
-        }
-
-        function checkGameState() {
-            let hasMoves = false;
-            for (let i = 0; i < 64; i++) {
-                const p = board[i];
-                if (p && (turn === 'w' ? p === p.toUpperCase() : p === p.toLowerCase())) { if (getLegalMoves(i, p, board, enPassantTarget).length > 0) { hasMoves = true; break; } }
-            }
-            if (!hasMoves) {
-                isGameOver = true; clearInterval(timerInterval);
-                if (isCheck(turn, board)) alert(`Xeque-Mate!`);
-                else alert("Empate (Afogamento)");
-            }
-        }
-
-        function renderBoard() {
-            boardEl.innerHTML = '';
-            const inCheck = !isGameOver && isCheck(turn, board);
-            const kPos = board.indexOf(turn === 'w' ? 'K' : 'k');
-            for (let i = 0; i < 64; i++) {
-                const act = isFlipped ? (63 - i) : i, r = Math.floor(act / 8), c = act % 8;
-                const sq = document.createElement('div');
-                sq.className = `sq ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                if (selectedSquare === act) sq.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-                if (history.length > 0) { const last = history[history.length-1]; if (last && (last.from === act || last.to === act)) sq.classList.add('last-move'); }
-                const move = legalMovesForSelected.find(m => m.to === act);
-                if (move) sq.classList.add(move.captured ? 'hl-cap' : 'hl-dot');
-                if (inCheck && act === kPos) sq.classList.add('chk');
-                const p = board[act];
-                if (p) sq.innerHTML = `<span class="piece">${getPieceChar(p)}</span>`; 
-                sq.onclick = () => handleSquareClick(act);
-                boardEl.appendChild(sq);
-            }
-        }
-
-        function getPieceChar(p) {
-            const THEMES = {
-                classic: { 'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙', 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
-            };
-            return THEMES.classic[p] || p;
-        }
-
-        function handleSquareClick(idx) {
-            if (isGameOver || (isOnlineGame && turn !== myOnlineColor) || (gameMode === 'pvc' && turn === 'b')) return;
-            const clicked = board[idx];
-            if (selectedSquare !== null) { const move = legalMovesForSelected.find(m => m.to === idx); if (move) { executeMove(move); return; } }
-            if (clicked) {
-                const isW = clicked === clicked.toUpperCase();
-                if ((turn === 'w' && isW) || (turn === 'b' && !isW)) { selectedSquare = idx; legalMovesForSelected = getLegalMoves(idx, clicked, board, enPassantTarget); } else { selectedSquare = null; legalMovesForSelected = []; }
-            } else { selectedSquare = null; legalMovesForSelected = []; }
-            renderBoard();
-        }
-
-        function executeMove(move) {
-            const isPawn = move.piece.toLowerCase() === 'p';
-            const isProm = (move.piece === 'P' && Math.floor(move.to / 8) === 0) || (move.piece === 'p' && Math.floor(move.to / 8) === 7);
-            if (isPawn && isProm) { pendingPromotion = move; document.getElementById('promo-modal').style.display = 'flex'; return; }
-            finalizeMove(move);
-        }
-
-        function selectPromotion(type) {
-            document.getElementById('promo-modal').style.display = 'none';
-            if (pendingPromotion) { pendingPromotion.piece = pendingPromotion.piece === 'P' ? type.toUpperCase() : type.toLowerCase(); finalizeMove(pendingPromotion); pendingPromotion = null; }
-        }
-
-        function finalizeMove(move) {
-            history.push({ from: move.from, to: move.to, board: [...board] });
-            board[move.to] = move.piece; board[move.from] = null;
-            if (move.isEnPassant) board[move.piece === 'P' ? move.to + 8 : move.to - 8] = null;
-            enPassantTarget = null;
-            if (move.piece.toLowerCase() === 'p' && Math.abs(move.to - move.from) === 16) enPassantTarget = (move.to + move.from) / 2;
-
-            const note = `${move.piece.toUpperCase()}${String.fromCharCode(97 + (move.from % 8))}${8 - Math.floor(move.from / 8)}-${String.fromCharCode(97 + (move.to % 8))}${8 - Math.floor(move.to / 8)}`;
-            if (turn === 'b') { 
-                document.getElementById('move-list').innerHTML += `<li><span class="num">${moveNumber}.</span><span class="move">${note}</span></li>`; moveNumber++; 
-            } else {
-                const last = document.getElementById('move-list').lastElementChild;
-                if (last) last.innerHTML += ` <span class="move">${note}</span>`;
-                else { document.getElementById('move-list').innerHTML += `<li><span class="num">${moveNumber}.</span><span class="move">...</span><span class="move">${note}</span></li>`; }
-            }
-
-            turn = turn === 'w' ? 'b' : 'w'; selectedSquare = null; legalMovesForSelected = [];
-            renderBoard(); checkGameState(); updateClockUI();
-
-            if (isOnlineGame && roomId) socket.emit('move', { room: roomId, move: move });
-            if (gameMode === 'pvc' && turn === 'b' && !isGameOver) setTimeout(makeAIMove, 500);
-        }
-
-        function makeAIMove() {
-            if (isGameOver) return;
-            let best = null, bestScore = -Infinity;
-            for (let i = 0; i < 64; i++) {
-                const p = board[i];
-                if (p && p === p.toLowerCase()) {
-                    const moves = getLegalMoves(i, p, board, enPassantTarget);
-                    for (let m of moves) {
-                        const tb = [...board]; tb[m.to] = m.piece; tb[m.from] = null;
-                        if (m.isEnPassant) tb[m.to - 8] = null;
-                        let sc = evalBoard(tb);
-                        if (isCheck('b', tb)) sc -= 50;
-                        sc += Math.random() * 10;
-                        if (sc > bestScore) { bestScore = sc; best = m; }
-                    }
-                }
-            }
-            if (best) executeMove(best);
-        }
-
-        function evalBoard(cb) {
-            let sc = 0;
-            for (let p of cb) { if (p) { const v = pieceValues[p.toLowerCase()]; if (p === p.toLowerCase()) sc += v; else sc -= v; } }
-            return sc;
-        }
-
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
