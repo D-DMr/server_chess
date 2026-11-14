@@ -6,56 +6,73 @@ let myColor = 'w';
 let roomId = null;
 let selectedSquare = null;
 let isOnline = false;
+let searchTimeout = null;
+
+// Configurações escolhidas no Lobby
+let configTime = '10+0';
+let configMode = 'ranked';
+let configColor = 'random';
 
 // ==========================================
-// NAVEGAÇÃO E MENUS
+// NAVEGAÇÃO E LOBBY
 // ==========================================
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
 }
 
-function startAI() {
-    isOnline = false;
-    myColor = 'w';
-    document.getElementById('opp-name').innerText = "Computador";
-    showScreen('game-screen');
-    game.reset();
-    drawBoard();
+function selectTime(el, time) {
+    document.querySelectorAll('.setup-section:nth-child(2) .option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    configTime = time;
 }
 
-// ==========================================
-// LIGAÇÃO AO SERVIDOR (ONLINE)
-// ==========================================
-function createRoom() {
-    const name = document.getElementById('player-name').value || "Jogador";
-    socket.emit('create_room', { name });
+function selectMode(el, mode) {
+    document.querySelectorAll('.setup-section:nth-child(3) .option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    configMode = mode;
 }
 
-function joinRoom() {
-    const name = document.getElementById('player-name').value || "Jogador";
-    const code = document.getElementById('join-code').value.toUpperCase();
-    if(!code) return alert("Insere o código da sala!");
-    socket.emit('join_room', { name, roomId: code });
+function selectColor(el, color) {
+    document.querySelectorAll('.setup-section:nth-child(4) .option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    configColor = color;
 }
 
-socket.on('room_created', (data) => {
+function findMatch() {
+    showScreen('searching-screen');
+    
+    // Simulação de procura (Aguarda 3 segundos e liga ao servidor)
+    searchTimeout = setTimeout(() => {
+        // O jogador escolheu as brancas, pretas ou aleatório
+        let chosenColor = configColor;
+        if (chosenColor === 'random') chosenColor = Math.random() < 0.5 ? 'w' : 'b';
+        
+        socket.emit('find_match', { 
+            mode: configMode, 
+            time: configTime, 
+            color: chosenColor,
+            name: "Jogador"
+        });
+    }, 3000);
+}
+
+function cancelSearch() {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    showScreen('online-screen');
+}
+
+// Eventos do Servidor
+socket.on('match_found', (data) => {
     isOnline = true;
+    myColor = data.color;
     roomId = data.roomId;
-    myColor = 'w'; 
-    document.getElementById('my-name').innerText = document.getElementById('player-name').value || "Tu";
-    document.getElementById('opp-name').innerText = "À espera...";
+    
+    document.getElementById('opp-name').innerText = data.opponent;
+    document.getElementById('my-name').innerText = "Tu";
+    
     showScreen('game-screen');
     game.reset();
-    drawBoard();
-});
-
-socket.on('game_start', (data) => {
-    isOnline = true;
-    myColor = 'b'; 
-    document.getElementById('opp-name').innerText = data.players.find(p => p.id !== socket.id)?.name || "Oponente";
-    showScreen('game-screen');
-    game.load(data.fen);
     drawBoard();
 });
 
@@ -65,7 +82,18 @@ socket.on('move', (move) => {
     updateHistory(move);
 });
 
-socket.on('error_msg', (msg) => alert(msg));
+// ==========================================
+// JOGAR VS IA
+// ==========================================
+function startAI() {
+    isOnline = false;
+    myColor = 'w';
+    document.getElementById('opp-name').innerText = "Computador";
+    document.getElementById('my-name').innerText = "Tu";
+    showScreen('game-screen');
+    game.reset();
+    drawBoard();
+}
 
 // ==========================================
 // RENDERIZAÇÃO E JOGO
@@ -86,9 +114,7 @@ function drawBoard() {
             const coord = file + rank;
 
             const piece = boardState[r][c];
-            if (piece) {
-                sq.innerText = getPieceSymbol(piece.color, piece.type);
-            }
+            if (piece) sq.innerText = getPieceSymbol(piece.color, piece.type);
 
             if (selectedSquare === coord) sq.classList.add('highlight');
             
@@ -116,7 +142,7 @@ function handleSquareClick(coord) {
             updateHistory(move);
             
             if (isOnline) {
-                socket.emit('move', { roomId: roomId, fen: game.fen(), move: { from: move.from, to: move.to, promotion: move.promotion } });
+                socket.emit('move', { roomId: roomId, move: { from: move.from, to: move.to, promotion: move.promotion } });
             } else {
                 setTimeout(makeAIMove, 500);
             }
@@ -177,11 +203,11 @@ function evaluateBoard() {
             }
         }
     }
-    return score + Math.random() * 5; // Aleatoriedade para variar
+    return score + Math.random() * 5;
 }
 
 // ==========================================
-// UTILS
+// UTILITÁRIOS
 // ==========================================
 function getPieceSymbol(color, type) {
     const symbols = {
